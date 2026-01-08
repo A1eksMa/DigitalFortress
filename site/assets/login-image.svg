@@ -1,0 +1,40 @@
+<svg width="300" height="350" xmlns="http://www.w3.org/2000/svg">
+  <!-- Фон -->
+  <rect width="300" height="350" fill="#f0e6ff"/>
+
+  <!-- Голова -->
+  <circle cx="150" cy="140" r="60" fill="#ffb3d9"/>
+
+  <!-- Левое ушко -->
+  <polygon points="110,80 90,30 130,90" fill="#ffb3d9"/>
+  <polygon points="110,80 95,40 125,85" fill="#ff99cc"/>
+
+  <!-- Правое ушко -->
+  <polygon points="190,80 210,30 170,90" fill="#ffb3d9"/>
+  <polygon points="190,80 205,40 175,85" fill="#ff99cc"/>
+
+  <!-- Волосы -->
+  <ellipse cx="150" cy="100" rx="65" ry="40" fill="#9370db"/>
+  <ellipse cx="120" cy="110" rx="25" ry="50" fill="#9370db"/>
+  <ellipse cx="180" cy="110" rx="25" ry="50" fill="#9370db"/>
+
+  <!-- Глаза -->
+  <ellipse cx="130" cy="130" rx="12" ry="18" fill="#fff"/>
+  <ellipse cx="170" cy="130" rx="12" ry="18" fill="#fff"/>
+  <circle cx="130" cy="135" r="8" fill="#663399"/>
+  <circle cx="170" cy="135" r="8" fill="#663399"/>
+  <circle cx="132" cy="132" r="4" fill="#000"/>
+  <circle cx="172" cy="132" r="4" fill="#000"/>
+
+  <!-- Носик -->
+  <polygon points="150,145 145,152 155,152" fill="#ffccdd"/>
+
+  <!-- Улыбка -->
+  <path d="M 135 160 Q 150 170 165 160" stroke="#ff69b4" stroke-width="3" fill="none"/>
+
+  <!-- Тело (силуэт) -->
+  <ellipse cx="150" cy="250" rx="70" ry="80" fill="#d8b5ff"/>
+
+  <!-- Текст -->
+  <text x="150" y="330" text-anchor="middle" fill="#663399" font-size="24" font-family="Arial">Добро пожаловать!</text>
+</svg>

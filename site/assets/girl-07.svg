@@ -1,0 +1,14 @@
+<svg width="200" height="280" xmlns="http://www.w3.org/2000/svg">
+  <!-- Каэдэ - зеленая -->
+  <rect width="200" height="280" fill="#e6ffe6"/>
+  <circle cx="100" cy="100" r="50" fill="#32cd32"/>
+  <polygon points="70,50 55,15 85,55" fill="#32cd32"/>
+  <polygon points="130,50 145,15 115,55" fill="#32cd32"/>
+  <circle cx="85" cy="95" r="8" fill="#fff"/>
+  <circle cx="115" cy="95" r="8" fill="#fff"/>
+  <circle cx="85" cy="95" r="4" fill="#000"/>
+  <circle cx="115" cy="95" r="4" fill="#000"/>
+  <path d="M 85 110 Q 100 120 115 110" stroke="#fff" stroke-width="2.5" fill="none"/>
+  <ellipse cx="100" cy="180" rx="60" ry="70" fill="#90ee90"/>
+  <text x="100" y="260" text-anchor="middle" fill="#228b22" font-size="28" font-family="Arial" font-weight="bold">Каэдэ</text>
+</svg>

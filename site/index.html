@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neko Paradise - Виртуальные подруги 18+</title>
+    <meta name="description" content="Виртуальные кошкодевочки с ИИ. Эксклюзивная галерея, видео-контент и интимное общение.">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Roboto:wght@300;400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: rgba(22, 33, 62, 0.95);
+            padding: 20px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 20px rgba(255, 107, 157, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-container img {
+            height: 50px;
+            filter: drop-shadow(0 0 10px rgba(255, 107, 157, 0.6));
+        }
+
+        .site-title {
+            font-family: 'Pacifico', cursive;
+            font-size: 32px;
+            background: linear-gradient(45deg, #ff6b9d, #c471ed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 20px rgba(255, 107, 157, 0.5);
+        }
+
+        nav {
+            display: flex;
+            gap: 30px;
+        }
+
+        nav a {
+            color: #eee;
+            text-decoration: none;
+            font-size: 18px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        nav a:hover {
+            background: rgba(255, 107, 157, 0.2);
+            border-color: #ff6b9d;
+            transform: translateY(-2px);
+        }
+
+        nav a.active {
+            background: linear-gradient(45deg, #ff6b9d, #c471ed);
+            color: #fff;
+            font-weight: 700;
+        }
+
+        main {
+            flex: 1;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Страница входа */
+        .login-container {
+            max-width: 450px;
+            margin: 60px auto;
+            background: rgba(22, 33, 62, 0.8);
+            padding: 50px;
+            border-radius: 20px;
+            box-shadow: 0 8px 40px rgba(255, 107, 157, 0.3);
+            text-align: center;
+        }
+
+        .login-image {
+            margin-bottom: 30px;
+        }
+
+        .login-image img {
+            max-width: 300px;
+            width: 100%;
+            border-radius: 15px;
+        }
+
+        .login-form input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px solid #ff6b9d;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .login-form input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 20px rgba(255, 107, 157, 0.5);
+        }
+
+        .login-form input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #ff6b9d, #c471ed);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 25px rgba(255, 107, 157, 0.5);
+        }
+
+        .social-login {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .social-login p {
+            margin-bottom: 15px;
+            color: #aaa;
+        }
+
+        .social-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .btn-social {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 2px solid #ff6b9d;
+            background: transparent;
+            color: #ff6b9d;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn-social:hover {
+            background: #ff6b9d;
+            color: #fff;
+        }
+
+        /* Галерея */
+        .gallery-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .gallery-header h2 {
+            font-size: 42px;
+            background: linear-gradient(45deg, #ff6b9d, #c471ed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+        }
+
+        .gallery-header p {
+            font-size: 18px;
+            color: #aaa;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .gallery-card {
+            background: rgba(22, 33, 62, 0.8);
+            border-radius: 20px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .gallery-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 15px 50px rgba(255, 107, 157, 0.4);
+            border-color: #ff6b9d;
+        }
+
+        .gallery-card img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .gallery-card .card-name {
+            text-align: center;
+            padding: 15px;
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(45deg, #ff6b9d, #c471ed);
+            color: #fff;
+        }
+
+        /* Страница "О проекте" */
+        .about-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(22, 33, 62, 0.8);
+            padding: 60px;
+            border-radius: 20px;
+            box-shadow: 0 8px 40px rgba(255, 107, 157, 0.3);
+            line-height: 1.8;
+        }
+
+        .about-container h2 {
+            text-align: center;
+            font-size: 42px;
+            margin-bottom: 40px;
+            background: linear-gradient(45deg, #ff6b9d, #c471ed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .about-container h3 {
+            color: #ff6b9d;
+            font-size: 28px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+
+        .about-container p {
+            margin-bottom: 20px;
+            font-size: 17px;
+            color: #ccc;
+        }
+
+        .about-container ul {
+            list-style: none;
+            margin: 30px 0;
+        }
+
+        .about-container ul li {
+            padding: 15px 0;
+            padding-left: 40px;
+            position: relative;
+            font-size: 17px;
+        }
+
+        .about-container ul li:before {
+            content: "🌸";
+            position: absolute;
+            left: 0;
+            font-size: 24px;
+        }
+
+        .features-list li:before {
+            content: "💬";
+        }
+
+        .video-list li:before {
+            content: "🎥";
+        }
+
+        .privacy-list li:before {
+            content: "✓";
+            color: #4caf50;
+            font-weight: bold;
+        }
+
+        .age-warning {
+            background: rgba(255, 107, 157, 0.2);
+            border: 2px solid #ff6b9d;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .age-warning strong {
+            font-size: 20px;
+            color: #ff6b9d;
+        }
+
+        .btn-back {
+            display: block;
+            max-width: 300px;
+            margin: 40px auto 0;
+            padding: 15px;
+            background: linear-gradient(45deg, #ff6b9d, #c471ed);
+            color: #fff;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-back:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 25px rgba(255, 107, 157, 0.5);
+        }
+
+        footer {
+            background: rgba(22, 33, 62, 0.95);
+            padding: 20px;
+            text-align: center;
+            color: #888;
+            font-size: 14px;
+            margin-top: auto;
+        }
+
+        footer strong {
+            color: #ff6b9d;
+        }
+
+        .message-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .message-overlay.show {
+            display: flex;
+        }
+
+        .message-box {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 40px;
+            border-radius: 20px;
+            border: 2px solid #ff6b9d;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 10px 50px rgba(255, 107, 157, 0.5);
+        }
+
+        .message-box h3 {
+            color: #ff6b9d;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .message-box p {
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .gallery-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            nav {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .about-container {
+                padding: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <img src="assets/logo.svg" alt="Neko Paradise">
+            <h1 class="site-title">✨ Neko Paradise ✨</h1>
+        </div>
+        <nav>
+            <a href="#" onclick="showPage('login')" id="nav-login" class="active">Вход</a>
+            <a href="#" onclick="showPage('gallery')" id="nav-gallery">Галерея</a>
+            <a href="#" onclick="showPage('about')" id="nav-about">О проекте</a>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Страница входа -->
+        <div id="page-login" class="page active">
+            <div class="login-container">
+                <div class="login-image">
+                    <img src="assets/login-image.svg" alt="Добро пожаловать">
+                </div>
+                <form class="login-form" onsubmit="return false;">
+                    <input type="text" placeholder="Логин" required>
+                    <input type="password" placeholder="Пароль" required>
+                    <button type="submit" class="btn-primary" onclick="showLoginMessage()">Войти</button>
+                </form>
+                <div class="social-login">
+                    <p>Или войдите через:</p>
+                    <div class="social-buttons">
+                        <button class="btn-social" onclick="showLoginMessage()">Google</button>
+                        <button class="btn-social" onclick="showLoginMessage()">VK</button>
+                        <button class="btn-social" onclick="showLoginMessage()">Telegram</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Страница галереи -->
+        <div id="page-gallery" class="page">
+            <div class="gallery-header">
+                <h2>Выберите свою виртуальную подругу</h2>
+                <p>Каждая девушка обладает уникальным характером и стилем общения</p>
+            </div>
+            <div class="gallery-grid">
+                <div class="gallery-card" onclick="selectGirl('Сакура')">
+                    <img src="assets/girl-01.svg" alt="Сакура">
+                </div>
+                <div class="gallery-card" onclick="selectGirl('Юки')">
+                    <img src="assets/girl-02.svg" alt="Юки">
+                </div>
+                <div class="gallery-card" onclick="selectGirl('Аяна')">
+                    <img src="assets/girl-03.svg" alt="Аяна">
+                </div>
+                <div class="gallery-card" onclick="selectGirl('Хината')">
+                    <img src="assets/girl-04.svg" alt="Хината">
+                </div>
+                <div class="gallery-card" onclick="selectGirl('Мику')">
+                    <img src="assets/girl-05.svg" alt="Мику">
+                </div>
+                <div class="gallery-card" onclick="selectGirl('Рин')">
+                    <img src="assets/girl-06.svg" alt="Рин">
+                </div>
+                <div class="gallery-card" onclick="selectGirl('Каэдэ')">
+                    <img src="assets/girl-07.svg" alt="Каэдэ">
+                </div>
+                <div class="gallery-card" onclick="selectGirl('Нанами')">
+                    <img src="assets/girl-08.svg" alt="Нанами">
+                </div>
+                <div class="gallery-card" onclick="selectGirl('Юи')">
+                    <img src="assets/girl-09.svg" alt="Юи">
+                </div>
+            </div>
+        </div>
+
+        <!-- Страница "О проекте" -->
+        <div id="page-about" class="page">
+            <div class="about-container">
+                <h2>О проекте Neko Paradise</h2>
+
+                <p>Добро пожаловать в мир виртуального общения нового поколения!</p>
+
+                <p><strong>Neko Paradise</strong> — это эксклюзивное пространство, где вы можете познакомиться с уникальными виртуальными персонажами, каждая из которых обладает своим характером, предпочтениями и стилем общения.</p>
+
+                <h3>Что вас ждёт после регистрации:</h3>
+
+                <ul>
+                    <li><strong>Эксклюзивная галерея</strong><br>
+                    Доступ к постоянно пополняемой коллекции изображений в высоком разрешении. Каждая девушка имеет свою уникальную галерею, раскрывающую её характер и... многое другое.</li>
+
+                    <li class="features-list"><strong>Интеллектуальное общение</strong><br>
+                    Общайтесь на любые темы с выбранной собеседницей. Наши ИИ-персонажи адаптируются под ваши предпочтения и готовы поддержать разговор любого уровня откровенности.</li>
+
+                    <li class="video-list"><strong>Видео-контент</strong><br>
+                    Эксклюзивные видеоматериалы доступны только зарегистрированным пользователям. От невинных до... весьма смелых.</li>
+
+                    <li><strong>Персонализация</strong><br>
+                    Каждая виртуальная подруга запоминает ваши предпочтения и адаптируется, создавая уникальный опыт общения, который становится всё более интимным с течением времени.</li>
+                </ul>
+
+                <div class="age-warning">
+                    <strong>🔞 Контент без ограничений</strong><br>
+                    Проект предназначен для совершеннолетних пользователей. Мы создаём пространство свободы, где каждый найдёт то, что ищет. Здесь нет табу — только ваши желания и фантазии.
+                </div>
+
+                <h3>Приватность и безопасность:</h3>
+
+                <ul class="privacy-list">
+                    <li>Полная анонимность — никакой верификации личности</li>
+                    <li>Защищённое соединение — шифрование всех данных</li>
+                    <li>Никаких сторонних сервисов — ваши данные только у нас</li>
+                    <li>Ваши разговоры остаются только вашими — мы не храним переписку</li>
+                    <li>Защита от утечек — регулярный аудит безопасности</li>
+                </ul>
+
+                <p style="text-align: center; margin-top: 50px; font-size: 19px;">
+                    <strong>Готовы начать?</strong><br>
+                    Зарегистрируйтесь прямо сейчас и откройте дверь в мир, где фантазии становятся виртуальной реальностью.
+                </p>
+
+                <a href="#" class="btn-back" onclick="showPage('login')">Вернуться к входу</a>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        © 2026 Neko Paradise | Все права защищены | <strong>18+</strong> | Только для совершеннолетних
+    </footer>
+
+    <div class="message-overlay" id="messageOverlay" onclick="hideMessage()">
+        <div class="message-box" onclick="event.stopPropagation()">
+            <h3 id="messageTitle">Требуется регистрация</h3>
+            <p id="messageText">Для доступа к этой функции необходимо войти в систему.</p>
+            <button class="btn-primary" onclick="hideMessage()">Понятно</button>
+        </div>
+    </div>
+
+    <script>
+        function showPage(pageId) {
+            // Скрыть все страницы
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => page.classList.remove('active'));
+
+            // Показать выбранную страницу
+            document.getElementById('page-' + pageId).classList.add('active');
+
+            // Обновить активную ссылку в меню
+            const navLinks = document.querySelectorAll('nav a');
+            navLinks.forEach(link => link.classList.remove('active'));
+            document.getElementById('nav-' + pageId).classList.add('active');
+
+            // Прокрутка вверх
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function selectGirl(name) {
+            showMessage(
+                'Для начала общения с ' + name + ' необходимо войти в систему',
+                'Требуется регистрация'
+            );
+            setTimeout(() => {
+                hideMessage();
+                showPage('login');
+            }, 2500);
+        }
+
+        function showLoginMessage() {
+            showMessage(
+                'Функция входа временно недоступна. Регистрация откроется в ближайшее время!',
+                'В разработке'
+            );
+        }
+
+        function showMessage(text, title) {
+            document.getElementById('messageText').textContent = text;
+            document.getElementById('messageTitle').textContent = title || 'Сообщение';
+            document.getElementById('messageOverlay').classList.add('show');
+        }
+
+        function hideMessage() {
+            document.getElementById('messageOverlay').classList.remove('show');
+        }
+
+        // Закрытие сообщения по Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                hideMessage();
+            }
+        });
+
+        // Плавное появление при загрузке
+        window.addEventListener('load', function() {
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                document.body.style.transition = 'opacity 0.5s';
+                document.body.style.opacity = '1';
+            }, 100);
+        });
+    </script>
+</body>
+</html>
