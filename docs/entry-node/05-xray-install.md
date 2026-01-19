@@ -436,7 +436,112 @@ curl -I https://mimimi.pro/api/v2/xhttp/ваш-путь/
 
 ## 8. Автозапуск (systemd)
 
-Xray устанавливается с systemd-юнитом автоматически.
+Xray устанавливается с systemd-юнитом автоматически. Однако стандартная конфигурация требует дополнительной настройки прав доступа.
+
+### 8.1. Известная проблема: Xray не биндится к портам
+
+**Симптом:** После `systemctl start xray` сервис показывает статус `active (running)`, но при проверке портов — пустой вывод:
+
+```bash
+$ sudo ss -tlnp | grep 127.0.0.1
+# Пустой вывод — Xray не слушает на портах
+```
+
+**Причина:** Официальный скрипт устанавливает сервис с `User=nobody`. Этот пользователь не имеет прав на запись в директорию логов `/var/log/xray/`, что приводит к тихому падению процесса при инициализации.
+
+### 8.2. Решение: Настройка прав доступа
+
+**Вариант A: Исправление прав для пользователя nobody (рекомендуется)**
+
+```bash
+# Создаём директорию логов если её нет
+sudo mkdir -p /var/log/xray
+
+# Устанавливаем владельца nobody:nogroup
+sudo chown -R nobody:nogroup /var/log/xray
+
+# Устанавливаем права
+sudo chmod 755 /var/log/xray
+
+# Проверяем права на конфигурацию (должна быть читаема для nobody)
+sudo chmod 644 /usr/local/etc/xray/config.json
+
+# Проверяем права на geo-файлы
+sudo chmod 644 /usr/local/share/xray/*.dat 2>/dev/null || true
+
+# Перезапускаем сервис
+sudo systemctl restart xray
+
+# Проверяем порты
+sudo ss -tlnp | grep 127.0.0.1
+```
+
+**Вариант B: Создание выделенного пользователя xray**
+
+```bash
+# Создаём системного пользователя xray
+sudo useradd -r -s /usr/sbin/nologin -d /nonexistent xray
+
+# Настраиваем права на директории
+sudo chown -R xray:xray /var/log/xray
+sudo chown -R xray:xray /usr/local/etc/xray
+
+# Редактируем systemd unit
+sudo nano /etc/systemd/system/xray.service
+```
+
+Измените строку `User=nobody` на `User=xray`:
+
+```ini
+[Service]
+User=xray
+```
+
+```bash
+# Применяем изменения
+sudo systemctl daemon-reload
+sudo systemctl restart xray
+```
+
+**Вариант C: Запуск от root (быстрое решение, менее безопасно)**
+
+```bash
+# Редактируем systemd unit
+sudo nano /etc/systemd/system/xray.service
+```
+
+Закомментируйте или удалите строку `User=nobody`:
+
+```ini
+[Service]
+# User=nobody  # Закомментировано — запуск от root
+```
+
+```bash
+# Применяем изменения
+sudo systemctl daemon-reload
+sudo systemctl restart xray
+```
+
+### 8.3. Проверка после настройки
+
+```bash
+# Статус сервиса
+sudo systemctl status xray
+
+# Порты должны быть заняты
+sudo ss -tlnp | grep 127.0.0.1
+```
+
+**Ожидаемый вывод:**
+
+```
+LISTEN  0  4096  127.0.0.1:10001  0.0.0.0:*  users:(("xray",pid=...))
+LISTEN  0  4096  127.0.0.1:10002  0.0.0.0:*  users:(("xray",pid=...))
+LISTEN  0  4096  127.0.0.1:10003  0.0.0.0:*  users:(("xray",pid=...))
+```
+
+### 8.4. Включение автозапуска
 
 ```bash
 # Включаем автозапуск
@@ -446,7 +551,7 @@ sudo systemctl enable xray
 sudo systemctl is-enabled xray
 ```
 
-### Управление сервисом
+### 8.5. Управление сервисом
 
 ```bash
 # Запуск
@@ -479,6 +584,41 @@ sudo journalctl -u xray -n 50
 xray run -test -config /usr/local/etc/xray/config.json
 ```
 
+### Xray запущен, но не слушает на портах
+
+**Симптом:** `systemctl status xray` показывает `active (running)`, но `ss -tlnp | grep 127.0.0.1` пустой.
+
+**Диагностика:**
+
+```bash
+# Проверяем права на директорию логов
+ls -la /var/log/xray/
+
+# Проверяем, может ли nobody писать в директорию
+sudo -u nobody touch /var/log/xray/test && echo "OK" || echo "FAIL"
+sudo rm -f /var/log/xray/test
+
+# Проверяем журнал systemd на ошибки
+sudo journalctl -u xray -n 100 --no-pager
+```
+
+**Решение:** См. раздел 8.2 — настройка прав доступа.
+
+**Временный workaround (запуск вручную):**
+
+```bash
+# Останавливаем systemd-сервис
+sudo systemctl stop xray
+
+# Убиваем все процессы Xray
+sudo pkill -9 xray
+
+# Запускаем вручную (для тестирования)
+sudo /usr/local/bin/xray run -config /usr/local/etc/xray/config.json
+
+# После тестирования: Ctrl+C и исправление systemd
+```
+
 ### Nginx возвращает 502 Bad Gateway
 
 ```bash
@@ -486,7 +626,7 @@ xray run -test -config /usr/local/etc/xray/config.json
 sudo systemctl status xray
 
 # Порты слушаются?
-ss -tlnp | grep 1000
+sudo ss -tlnp | grep 1000
 
 # Проверяем логи Nginx
 sudo tail -f /var/log/nginx/mimimi.pro_error.log
@@ -499,13 +639,35 @@ sudo tail -f /var/log/nginx/mimimi.pro_error.log
 3. Проверьте, что TLS включён на клиенте
 4. Проверьте SNI — должен быть `mimimi.pro`
 
-### WebSocket не работает
+### XHTTP и WebSocket блокируются DPI
 
-```bash
-# Проверяем WebSocket upgrade
-curl -v -H "Upgrade: websocket" -H "Connection: Upgrade" \
-     https://mimimi.pro/api/v2/stream/ваш-путь/
+**Симптом:** Из открытого интернета подключение работает, из регулируемой сети — соединение сразу закрывается.
+
+**Причина:** Системы DPI (Deep Packet Inspection) анализируют паттерны трафика и могут блокировать XHTTP и WebSocket даже при использовании TLS.
+
+**Решение:** Использовать gRPC-транспорт. gRPC использует HTTP/2 framing и сложнее детектируется как VPN-трафик.
+
 ```
+vless://UUID@домен:443?type=grpc&security=tls&serviceName=api.v2.rpc.путь&sni=домен#Название
+```
+
+### Тесты подключения показывают ошибку
+
+**Симптом:** Клиент подключён, но встроенный тест показывает ошибку.
+
+**Причина:** Многие адреса, которые используются клиентами для тестирования (например, `gstatic.com`, `cloudflare.com`), заблокированы регулятором.
+
+**Проверка:** Откройте браузер и попробуйте зайти на любой сайт. Если сайты открываются — VPN работает, игнорируйте результаты встроенного теста.
+
+### Рекомендации по клиентам
+
+| Клиент | Платформа | Статус |
+|--------|-----------|--------|
+| **v2rayNG** | Android | ✅ Рекомендуется |
+| NekoBox | Android | ⚠️ Проблемы с подключением |
+| v2rayN | Windows | ✅ Работает |
+
+**Важно:** Используйте последние версии клиентов. XHTTP — относительно новый транспорт.
 
 ---
 

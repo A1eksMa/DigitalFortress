@@ -1,6 +1,11 @@
 # Настройка клиентских подключений
 
 **Статус:** Этап 1 (MVP)
+**Обновлено:** 2026-01-19
+
+---
+
+> **⚠️ Важно:** По результатам тестирования, **gRPC — единственный транспорт**, который работает через системы DPI в регулируемых сетях. XHTTP и WebSocket блокируются.
 
 ---
 
@@ -8,9 +13,9 @@
 
 1. [Параметры подключения](#1-параметры-подключения)
 2. [Формат VLESS-ссылки](#2-формат-vless-ссылки)
-3. [Подключение XHTTP (основной)](#3-подключение-xhttp-основной)
-4. [Подключение WebSocket](#4-подключение-websocket)
-5. [Подключение gRPC](#5-подключение-grpc)
+3. [Подключение gRPC (рекомендуется)](#3-подключение-grpc-рекомендуется)
+4. [Подключение XHTTP (блокируется DPI)](#4-подключение-xhttp-блокируется-dpi)
+5. [Подключение WebSocket (блокируется DPI)](#5-подключение-websocket-блокируется-dpi)
 6. [Клиентские приложения](#6-клиентские-приложения)
 7. [Проверка соединения](#7-проверка-соединения)
 8. [Диагностика проблем](#8-диагностика-проблем)
@@ -59,42 +64,30 @@ vless://UUID@АДРЕС:ПОРТ?параметры#имя
 
 ---
 
-## 3. Подключение XHTTP (основной)
+## 3. Подключение gRPC (рекомендуется)
 
-XHTTP (splithttp) — приоритетный транспорт, наиболее устойчивый к обнаружению.
+**✅ gRPC — единственный транспорт, работающий через DPI** в регулируемых сетях.
 
-### Параметры XHTTP
+gRPC использует HTTP/2 framing и сложнее детектируется системами глубокой инспекции пакетов.
+
+### Параметры gRPC
 
 | Параметр | Значение |
 |----------|----------|
-| Транспорт | `xhttp` (splithttp) |
-| Путь | `/api/v2/xhttp/ваш-случайный-путь/` |
+| Транспорт | `grpc` |
+| Service Name | `api.v2.rpc.ваш-случайный-путь` |
 | TLS | Включён |
-| SNI | Пустой |
+| SNI | `mimimi.pro` |
 
-### VLESS-ссылка для XHTTP
+### VLESS-ссылка для gRPC
 
 ```
-vless://ВАШ-UUID@mimimi.pro:443?type=xhttp&security=tls&path=%2Fapi%2Fv2%2Fxhttp%2Fваш-путь%2F&sni=&fp=chrome&alpn=h2%2Chttp%2F1.1#Entry-XHTTP
+vless://ВАШ-UUID@mimimi.pro:443?type=grpc&security=tls&serviceName=api.v2.rpc.ваш-путь&sni=mimimi.pro&fp=chrome&alpn=h2#Entry-gRPC
 ```
 
-**Разбор ссылки:**
+### Ручная настройка
 
-| Компонент | Значение |
-|-----------|----------|
-| `ВАШ-UUID` | UUID пользователя |
-| `mimimi.pro:443` | Адрес и порт |
-| `type=xhttp` | Транспорт XHTTP |
-| `security=tls` | TLS включён |
-| `path=...` | URL-encoded путь |
-| `sni=` | SNI пустой |
-| `fp=chrome` | Fingerprint Chrome |
-| `alpn=h2,http/1.1` | ALPN протоколы |
-| `#Entry-XHTTP` | Имя подключения |
-
-### Ручная настройка в клиенте
-
-**v2rayN / NekoBox / v2rayNG:**
+**v2rayNG (рекомендуется для Android):**
 
 1. Добавить сервер → VLESS
 2. Заполнить параметры:
@@ -104,19 +97,61 @@ vless://ВАШ-UUID@mimimi.pro:443?type=xhttp&security=tls&path=%2Fapi%2Fv2%2Fxh
 Порт: 443
 UUID: ваш-uuid
 Шифрование: none
+Транспорт: grpc
+Service Name: api.v2.rpc.ваш-путь
+TLS: включён
+SNI: mimimi.pro
+Fingerprint: chrome
+ALPN: h2
+```
+
+**Примечание:** Для gRPC используйте только `h2` в ALPN (не `h2,http/1.1`).
+
+---
+
+## 4. Подключение XHTTP (блокируется DPI)
+
+> **⚠️ Внимание:** XHTTP блокируется системами DPI в регулируемых сетях. Используйте только если вы находитесь в открытом интернете.
+
+XHTTP (splithttp) — транспорт, разбивающий трафик на множество HTTP-запросов.
+
+### Параметры XHTTP
+
+| Параметр | Значение |
+|----------|----------|
+| Транспорт | `xhttp` (splithttp) |
+| Путь | `/api/v2/xhttp/ваш-случайный-путь/` |
+| TLS | Включён |
+| SNI | Пустой или `mimimi.pro` |
+
+### VLESS-ссылка для XHTTP
+
+```
+vless://ВАШ-UUID@mimimi.pro:443?type=xhttp&security=tls&path=%2Fapi%2Fv2%2Fxhttp%2Fваш-путь%2F&sni=mimimi.pro&fp=chrome&alpn=h2%2Chttp%2F1.1#Entry-XHTTP
+```
+
+### Ручная настройка в клиенте
+
+```
+Адрес: mimimi.pro
+Порт: 443
+UUID: ваш-uuid
+Шифрование: none
 Транспорт: xhttp (или splithttp)
 Путь: /api/v2/xhttp/ваш-путь/
 TLS: включён
-SNI: (оставить пустым)
+SNI: mimimi.pro
 Fingerprint: chrome
 ALPN: h2,http/1.1
 ```
 
 ---
 
-## 4. Подключение WebSocket
+## 5. Подключение WebSocket (блокируется DPI)
 
-WebSocket — резервный транспорт, хорошо совместим с CDN.
+> **⚠️ Внимание:** WebSocket блокируется системами DPI в регулируемых сетях. Используйте только если вы находитесь в открытом интернете.
+
+WebSocket — транспорт, совместимый с CDN.
 
 ### Параметры WebSocket
 
@@ -125,12 +160,12 @@ WebSocket — резервный транспорт, хорошо совмест
 | Транспорт | `ws` |
 | Путь | `/api/v2/stream/ваш-случайный-путь/` |
 | TLS | Включён |
-| SNI | Пустой |
+| SNI | `mimimi.pro` |
 
 ### VLESS-ссылка для WebSocket
 
 ```
-vless://ВАШ-UUID@mimimi.pro:443?type=ws&security=tls&path=%2Fapi%2Fv2%2Fstream%2Fваш-путь%2F&sni=&fp=chrome&alpn=h2%2Chttp%2F1.1#Entry-WS
+vless://ВАШ-UUID@mimimi.pro:443?type=ws&security=tls&path=%2Fapi%2Fv2%2Fstream%2Fваш-путь%2F&sni=mimimi.pro&fp=chrome&alpn=h2%2Chttp%2F1.1#Entry-WS
 ```
 
 ### Ручная настройка
@@ -143,48 +178,10 @@ UUID: ваш-uuid
 Транспорт: ws
 Путь: /api/v2/stream/ваш-путь/
 TLS: включён
-SNI: (оставить пустым)
+SNI: mimimi.pro
 Fingerprint: chrome
 ALPN: h2,http/1.1
 ```
-
----
-
-## 5. Подключение gRPC
-
-gRPC — резервный транспорт на основе HTTP/2 с мультиплексированием.
-
-### Параметры gRPC
-
-| Параметр | Значение |
-|----------|----------|
-| Транспорт | `grpc` |
-| Service Name | `api.v2.rpc.ваш-случайный-путь` |
-| TLS | Включён |
-| SNI | Пустой |
-
-### VLESS-ссылка для gRPC
-
-```
-vless://ВАШ-UUID@mimimi.pro:443?type=grpc&security=tls&serviceName=api.v2.rpc.ваш-путь&sni=&fp=chrome&alpn=h2#Entry-gRPC
-```
-
-### Ручная настройка
-
-```
-Адрес: mimimi.pro
-Порт: 443
-UUID: ваш-uuid
-Шифрование: none
-Транспорт: grpc
-Service Name: api.v2.rpc.ваш-путь
-TLS: включён
-SNI: (оставить пустым)
-Fingerprint: chrome
-ALPN: h2
-```
-
-**Примечание:** Для gRPC рекомендуется использовать только `h2` в ALPN.
 
 ---
 
@@ -214,10 +211,12 @@ ALPN: h2
 
 ### Android
 
-| Приложение | Описание | Ссылка |
-|------------|----------|--------|
-| **v2rayNG** | Официальный клиент | [GitHub](https://github.com/2dust/v2rayNG) |
-| **NekoBox** | Современный клиент | [GitHub](https://github.com/MatsuriDayo/NekoBoxForAndroid) |
+| Приложение | Описание | Статус | Ссылка |
+|------------|----------|--------|--------|
+| **v2rayNG** | Официальный клиент | ✅ Рекомендуется | [GitHub](https://github.com/2dust/v2rayNG) |
+| NekoBox | Современный клиент | ⚠️ Проблемы с подключением | [GitHub](https://github.com/MatsuriDayo/NekoBoxForAndroid) |
+
+> **Примечание:** По результатам тестирования, v2rayNG успешно устанавливает соединение, в то время как NekoBox (даже последняя версия) не смог подключиться.
 
 ### iOS
 
@@ -295,22 +294,22 @@ curl https://ifconfig.me
 
 **Замените `UUID` и `путь` на ваши значения.**
 
-### XHTTP (рекомендуемый)
+### gRPC (рекомендуется — работает через DPI)
 
 ```
-vless://a1b2c3d4-e5f6-7890-abcd-ef1234567890@mimimi.pro:443?type=xhttp&security=tls&path=%2Fapi%2Fv2%2Fxhttp%2Fa3f8b2c1d4e5f678%2F&sni=&fp=chrome&alpn=h2%2Chttp%2F1.1#Mimimi-XHTTP
+vless://a1b2c3d4-e5f6-7890-abcd-ef1234567890@mimimi.pro:443?type=grpc&security=tls&serviceName=api.v2.rpc.e1d2c3b4a5968778&sni=mimimi.pro&fp=chrome&alpn=h2#Mimimi-gRPC
 ```
 
-### WebSocket
+### XHTTP (блокируется DPI)
 
 ```
-vless://a1b2c3d4-e5f6-7890-abcd-ef1234567890@mimimi.pro:443?type=ws&security=tls&path=%2Fapi%2Fv2%2Fstream%2F9b7c6d5e4f3a2b1c%2F&sni=&fp=chrome&alpn=h2%2Chttp%2F1.1#Mimimi-WS
+vless://a1b2c3d4-e5f6-7890-abcd-ef1234567890@mimimi.pro:443?type=xhttp&security=tls&path=%2Fapi%2Fv2%2Fxhttp%2Fa3f8b2c1d4e5f678%2F&sni=mimimi.pro&fp=chrome&alpn=h2%2Chttp%2F1.1#Mimimi-XHTTP
 ```
 
-### gRPC
+### WebSocket (блокируется DPI)
 
 ```
-vless://a1b2c3d4-e5f6-7890-abcd-ef1234567890@mimimi.pro:443?type=grpc&security=tls&serviceName=api.v2.rpc.e1d2c3b4a5968778&sni=&fp=chrome&alpn=h2#Mimimi-gRPC
+vless://a1b2c3d4-e5f6-7890-abcd-ef1234567890@mimimi.pro:443?type=ws&security=tls&path=%2Fapi%2Fv2%2Fstream%2F9b7c6d5e4f3a2b1c%2F&sni=mimimi.pro&fp=chrome&alpn=h2%2Chttp%2F1.1#Mimimi-WS
 ```
 
 ---
@@ -347,16 +346,16 @@ urlencode() {
 }
 
 # Генерация ссылок
-echo "=== XHTTP ==="
-echo "vless://${UUID}@${DOMAIN}:${PORT}?type=xhttp&security=tls&path=$(urlencode ${XHTTP_PATH})&sni=&fp=chrome&alpn=h2%2Chttp%2F1.1#Entry-XHTTP"
+echo "=== gRPC (рекомендуется) ==="
+echo "vless://${UUID}@${DOMAIN}:${PORT}?type=grpc&security=tls&serviceName=${GRPC_SERVICE}&sni=${DOMAIN}&fp=chrome&alpn=h2#Entry-gRPC"
 echo ""
 
-echo "=== WebSocket ==="
-echo "vless://${UUID}@${DOMAIN}:${PORT}?type=ws&security=tls&path=$(urlencode ${WS_PATH})&sni=&fp=chrome&alpn=h2%2Chttp%2F1.1#Entry-WS"
+echo "=== XHTTP (блокируется DPI) ==="
+echo "vless://${UUID}@${DOMAIN}:${PORT}?type=xhttp&security=tls&path=$(urlencode ${XHTTP_PATH})&sni=${DOMAIN}&fp=chrome&alpn=h2%2Chttp%2F1.1#Entry-XHTTP"
 echo ""
 
-echo "=== gRPC ==="
-echo "vless://${UUID}@${DOMAIN}:${PORT}?type=grpc&security=tls&serviceName=${GRPC_SERVICE}&sni=&fp=chrome&alpn=h2#Entry-gRPC"
+echo "=== WebSocket (блокируется DPI) ==="
+echo "vless://${UUID}@${DOMAIN}:${PORT}?type=ws&security=tls&path=$(urlencode ${WS_PATH})&sni=${DOMAIN}&fp=chrome&alpn=h2%2Chttp%2F1.1#Entry-WS"
 ```
 
 ---
