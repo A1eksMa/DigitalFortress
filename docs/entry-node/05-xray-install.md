@@ -265,9 +265,15 @@ sudo nano /etc/nginx/sites-available/mimimi.pro
 
 ### 6.2. Добавление проксирования для Xray
 
-Добавьте следующие блоки `location` внутрь секции `server { listen 443 ssl; ... }`:
+Добавьте `map` директиву и блоки `location` в конфигурацию:
 
 ```nginx
+# ВАЖНО: Добавить ДО блока server {}
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
@@ -299,12 +305,13 @@ server {
         proxy_pass http://127.0.0.1:10002;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection $connection_upgrade;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
+        proxy_buffering off;
     }
 
     # === gRPC транспорт ===
@@ -349,6 +356,38 @@ server {
 | `proxy_set_header Upgrade` | Обязательно для WebSocket upgrade |
 | `grpc_pass` | Специальная директива для gRPC |
 | `proxy_read_timeout 300s` | Длительные соединения для VPN |
+
+### 6.4. Критично: map директива для WebSocket
+
+**Проблема:** При использовании HTTP/2 (`listen 443 ssl http2`) переменная `$http_upgrade` может быть пустой, и WebSocket не будет работать.
+
+**Решение:** Добавьте в начало файла конфигурации (перед `server {}`):
+
+```nginx
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+```
+
+И используйте в location WebSocket:
+
+```nginx
+location /api/v2/stream/ВАШ-СЛУЧАЙНЫЙ-ПУТЬ/ {
+    proxy_pass http://127.0.0.1:10002;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;  # Динамическое значение!
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
+    proxy_buffering off;
+}
+```
+
+**Важно:** Без `map` директивы WebSocket подключения будут зависать или не устанавливаться.
 
 ### 6.4. Fallback на сайт-прикрытие
 

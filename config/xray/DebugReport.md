@@ -1,9 +1,21 @@
-# Отчёт о диагностике Entry-ноды mimimi.pro
+# Отчёт о диагностике Entry-нод DigitalFortress
 
 **Дата:** 2026-01-19 (обновлено)
-**Статус:** ✅ gRPC транспорт работает | ⚠️ XHTTP/WebSocket блокируются DPI
+**Статус:** ✅ gRPC и WebSocket работают | ⚠️ XHTTP блокируется DPI
 
 ---
+
+## Сводная таблица транспортов
+
+| Транспорт | Япония → РФ | Внутри РФ | Рекомендация |
+|-----------|-------------|-----------|--------------|
+| **gRPC** | ✅ Работает | ✅ Работает | Основной транспорт |
+| **WebSocket** | ❌ Блокируется | ✅ Работает | Резервный (внутри контура) |
+| **XHTTP** | ❌ Блокируется | ❌ Блокируется | Только для открытого интернета |
+
+---
+
+# Нода 1: Япония (ABLENET)
 
 ## 1. Конфигурация сервера
 
@@ -12,7 +24,7 @@
 | Параметр | Значение |
 |----------|----------|
 | IP-адрес | 202.223.48.9 |
-| Домен | mimimi.pro |
+| Домен | mimimi.pro (ранее) |
 | ОС | Ubuntu 22.04 |
 | Хостинг | ABLENET (Япония) |
 | RAM | 1.5 GB |
@@ -513,6 +525,138 @@ sudo systemctl restart xray
 
 ```
 vless://d2e5507d-e265-44ba-acc4-1356e4a6d70e@mimimi.pro:443?type=grpc&security=tls&serviceName=api.v2.rpc.ed43dc57c52e69c0&sni=mimimi.pro&alpn=h2&fp=chrome#Mimimi-gRPC
+```
+
+---
+
+---
+
+# Нода 2: Россия (leto)
+
+## 1. Конфигурация сервера
+
+### 1.1. Параметры инстанса
+
+| Параметр | Значение |
+|----------|----------|
+| IP-адрес | 94.232.46.43 |
+| Hostname | leto |
+| Домен | mimimi.pro |
+| ОС | Debian 12 |
+| Расположение | Россия (регулируемый контур) |
+
+### 1.2. Версии ПО
+
+| Компонент | Версия |
+|-----------|--------|
+| Xray-core | 26.1.18 (go1.25.6 linux/amd64) |
+| Nginx | 1.18.0 |
+| SSL | Let's Encrypt (до 2026-04-19) |
+
+---
+
+## 2. Результаты тестирования (2026-01-19)
+
+### 2.1. Статус транспортов
+
+| Транспорт | Сервер | Из регулируемой сети | Причина |
+|-----------|--------|---------------------|---------|
+| **gRPC** | ✅ OK | ✅ Работает | HTTP/2 framing не детектируется DPI |
+| **WebSocket** | ✅ OK | ✅ Работает | После исправления Nginx (map directive) |
+| **XHTTP** | ✅ OK | ❌ Блокируется | DPI распознаёт паттерн splithttp |
+
+### 2.2. Важное отличие от японской ноды
+
+**WebSocket работает внутри регулируемого контура**, но блокируется при трансграничном подключении (Япония → РФ).
+
+Это означает, что DPI применяет разные правила:
+- Трансграничный трафик: блокируется WebSocket и XHTTP
+- Внутренний трафик: блокируется только XHTTP
+
+### 2.3. Анализ блокировки XHTTP
+
+**Симптомы:**
+- Запросы доходят до сервера (HTTP 200 в access.log)
+- Xray начинает обработку соединения
+- DPI разрывает соединение после анализа паттерна
+
+**Логи Xray:**
+```
+transport/internet/splithttp: failed to upload (PushReader) > packet queue closed
+app/proxyman/inbound: connection ends > EOF
+app/proxyman/inbound: connection ends > http: invalid Read on closed Body
+```
+
+**Подтверждение — запрос с localhost работает:**
+```bash
+curl -sv -X POST "https://mimimi.pro/api/v2/xhttp/PATH/test"
+# HTTP/2 400 + x-padding — корректный ответ Xray
+```
+
+---
+
+## 3. Исправления конфигурации
+
+### 3.1. WebSocket: добавлена map директива
+
+**Проблема:** Заголовок `Upgrade` не передавался при HTTP/2.
+
+**Решение:** В начало Nginx конфига добавить:
+```nginx
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+```
+
+И в location WebSocket:
+```nginx
+proxy_set_header Upgrade $http_upgrade;
+proxy_set_header Connection $connection_upgrade;
+proxy_buffering off;
+```
+
+### 3.2. XHTTP: добавлена оптимизация (не помогла против DPI)
+
+```nginx
+proxy_set_header Connection "";
+proxy_buffering off;
+chunked_transfer_encoding on;
+```
+
+---
+
+## 4. Рекомендации
+
+### 4.1. Для подключений из регулируемых сетей
+
+1. **gRPC** — основной транспорт (работает везде)
+2. **WebSocket** — резервный (работает внутри контура)
+3. **XHTTP** — не использовать (блокируется DPI)
+
+### 4.2. Конфигурация Nginx для WebSocket (обязательно)
+
+```nginx
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+```
+
+Без этой директивы WebSocket не будет работать через HTTP/2.
+
+---
+
+## 5. Клиентские ссылки
+
+### gRPC (рекомендуется)
+```
+vless://UUID@mimimi.pro:443?type=grpc&security=tls&serviceName=api.v2.rpc.RANDOM_PATH&sni=mimimi.pro&alpn=h2&fp=chrome#Mimimi-gRPC
+```
+
+### WebSocket (резервный)
+```
+vless://UUID@mimimi.pro:443?type=ws&security=tls&path=/api/v2/stream/RANDOM_PATH/&sni=mimimi.pro&fp=chrome#Mimimi-WS
 ```
 
 ---
