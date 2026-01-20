@@ -1,8 +1,8 @@
 # Конфигурация Entry-ноды (Россия)
 
-**Версия:** 1.0
-**Дата:** 2026-01-19
-**Статус:** Этап 1 (MVP) — тестовая нода в регулируемом контуре
+**Версия:** 2.0
+**Дата:** 2026-01-20
+**Статус:** Этап 2 — туннель через Core-ноду
 
 ---
 
@@ -112,6 +112,36 @@
   ],
   "outbounds": [
     {
+      "tag": "to-core",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "45.63.121.41",
+            "port": 443,
+            "users": [
+              {
+                "id": "d2e5507d-e265-44ba-acc4-1356e4a6d70e",
+                "encryption": "none",
+                "level": 0
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "security": "tls",
+        "tlsSettings": {
+          "allowInsecure": true,
+          "serverName": "45.63.121.41"
+        },
+        "wsSettings": {
+          "path": "/api/v2/stream/42f6ebda8e293614/"
+        }
+      }
+    },
+    {
       "tag": "direct",
       "protocol": "freedom",
       "settings": {}
@@ -129,6 +159,11 @@
         "type": "field",
         "ip": ["geoip:private"],
         "outboundTag": "block"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["vless-xhttp", "vless-ws", "vless-grpc"],
+        "outboundTag": "to-core"
       }
     ]
   }
@@ -313,4 +348,54 @@ echo | openssl s_client -servername mimimi.pro -connect mimimi.pro:443 2>/dev/nu
 
 ---
 
-*Документ создан: 2026-01-19*
+## 8. Обновление: Этап 2 (2026-01-20)
+
+### 8.1. Изменения
+
+Конфигурация обновлена для маршрутизации трафика через Core-ноду:
+
+| Было (этап 1) | Стало (этап 2) |
+|---------------|----------------|
+| `outbound: freedom` | `outbound: to-core` |
+| Трафик → Интернет напрямую | Трафик → Core-нода → Интернет |
+
+### 8.2. Параметры туннеля Entry → Core
+
+| Параметр | Значение |
+|----------|----------|
+| Core-нода | 45.63.121.41 (Япония) |
+| Протокол | VLESS |
+| Транспорт | WebSocket |
+| TLS | Самоподписанный (allowInsecure) |
+| Путь | `/api/v2/stream/42f6ebda8e293614/` |
+
+### 8.3. Схема работы
+
+```
+Клиент (РФ)
+    │
+    │ VLESS + gRPC/WS + TLS (Let's Encrypt)
+    │ mimimi.pro:443
+    ▼
+Entry-нода (94.232.46.43, РФ)  ← Вы здесь
+    │
+    │ VLESS + WS + TLS (самоподписанный)
+    │ 45.63.121.41:443
+    ▼
+Core-нода (45.63.121.41, Япония)
+    │
+    │ freedom
+    ▼
+Интернет
+```
+
+### 8.4. Результаты тестирования (2026-01-20)
+
+| Тест | Результат |
+|------|-----------|
+| Сетевая связь Entry → Core | ✅ OK |
+| HTTPS к Core-ноде | ✅ 200 |
+
+---
+
+*Документ обновлён: 2026-01-20*
