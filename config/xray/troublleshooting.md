@@ -10,7 +10,7 @@
 | Транспорт | Япония → РФ | Внутри РФ | Рекомендация |
 |-----------|-------------|-----------|--------------|
 | **gRPC** | ✅ Работает | ✅ Работает | Основной транспорт |
-| **WebSocket** | ❌ Блокируется | ✅ Работает | Резервный (внутри контура) |
+| **WebSocket** | ✅  Блокируется | ✅ Работает | Резервный (внутри контура) |
 | **XHTTP** | ❌ Блокируется | ❌ Блокируется | Только для открытого интернета |
 
 ---
@@ -140,6 +140,11 @@
 ### 1.4. Конфигурация Nginx (`/etc/nginx/sites-enabled/mimimi.pro`)
 
 ```nginx
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
@@ -154,31 +159,38 @@ server {
     index index.html;
 
     # XHTTP транспорт
-    location /api/v2/xhttp/de8556258953fcc5/ {
+    # Примечание: блокируется DPI в регулируемых сетях
+    location /api/v2/xhttp/RANDOM_PATH/ {
         proxy_pass http://127.0.0.1:10001;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Connection "";
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
+        proxy_buffering off;
+        chunked_transfer_encoding on;
     }
 
     # WebSocket транспорт
-    location /api/v2/stream/d4d34f819b478b12/ {
+    # Работает внутри регулируемого контура
+    location /api/v2/stream/RANDOM_PATH/ {
         proxy_pass http://127.0.0.1:10002;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection $connection_upgrade;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
+        proxy_buffering off;
     }
 
     # gRPC транспорт
-    location /api.v2.rpc.ed43dc57c52e69c0 {
+    # Рекомендуется как основной — работает везде
+    location /api.v2.rpc.RANDOM_PATH {
         grpc_pass grpc://127.0.0.1:10003;
         grpc_set_header Host $host;
         grpc_set_header X-Real-IP $remote_addr;
@@ -186,10 +198,12 @@ server {
         grpc_send_timeout 300s;
     }
 
+    # Сайт-прикрытие
     location / {
         try_files $uri $uri/ /index.html;
     }
 
+    # Кэширование статики
     location ~* \.(svg|jpg|jpeg|png|gif|ico|css|js)$ {
         expires 30d;
         add_header Cache-Control "public, immutable";
@@ -199,6 +213,7 @@ server {
     error_log /var/log/nginx/mimimi.pro_error.log;
 }
 
+# HTTP → HTTPS редирект
 server {
     listen 80;
     listen [::]:80;
@@ -285,7 +300,6 @@ x-padding: XXXX...
 | Приложение | NekoBox (Android) |
 | Местоположение | Россия |
 | Сеть | Мобильный интернет |
-| IP клиента | 178.216.218.134 |
 
 ### 3.2. VLESS-ссылка для XHTTP
 
@@ -305,13 +319,6 @@ vless://d2e5507d-e265-44ba-acc4-1356e4a6d70e@mimimi.pro:443?type=xhttp&security=
 ### 3.4. Логи Nginx при подключении
 
 Запросы доходят до сервера:
-
-```
-178.216.218.134 - - [18/Jan/2026:17:42:10 +0000] "GET /api/v2/xhttp/de8556258953fcc5/... HTTP/2.0" 200 0 "..." "Go-http-client/2.0"
-178.216.218.134 - - [18/Jan/2026:17:42:10 +0000] "POST /api/v2/xhttp/de8556258953fcc5/... HTTP/2.0" 200 198 "..." "Go-http-client/2.0"
-178.216.218.134 - - [18/Jan/2026:18:00:46 +0000] "POST /api/v2/xhttp/de8556258953fcc5/... HTTP/2.0" 200 542 "..." "Go-http-client/2.0"
-```
-
 **Статус:** HTTP 200, данные передаются (198, 542 байт).
 
 ### 3.5. Логи Xray
@@ -481,17 +488,17 @@ echo | openssl s_client -servername mimimi.pro -connect mimimi.pro:443 2>/dev/nu
 | Транспорт | Из открытого интернета | Из регулируемой сети (РФ) |
 |-----------|------------------------|---------------------------|
 | **gRPC** | ✅ Работает | ✅ Работает |
-| XHTTP | ✅ Работает | ❌ Блокируется DPI |
-| WebSocket | ✅ Работает | ❌ Блокируется DPI |
+| **XHTTP** | ✅ Работает | ❌ Блокируется DPI |
+| **WebSocket** | ✅ Работает | ✅ Блокируется DPI |
 
-**Вывод:** gRPC — единственный жизнеспособный транспорт для пользователей из регулируемых сетей.
+**Вывод:** gRPC, WebSocket — жизнеспособный транспорт для пользователей из регулируемых сетей.
 
 ### 8.2. Тестирование клиентов
 
 | Клиент | Платформа | Результат |
 |--------|-----------|-----------|
 | **v2rayNG** | Android | ✅ Успешное подключение |
-| NekoBox (последняя версия) | Android | ❌ Не удалось установить соединение |
+| **NekoBox** (последняя версия) | Android | ❌ Не удалось установить соединение |
 
 **Рекомендация:** Использовать v2rayNG для Android-устройств.
 
@@ -518,16 +525,6 @@ sudo systemctl restart xray
 ```
 
 Подробности — см. документацию `docs/entry-node/05-xray-install.md`, раздел 8.2.
-
-### 8.5. Рабочая конфигурация клиента
-
-**VLESS gRPC (рекомендуется):**
-
-```
-vless://d2e5507d-e265-44ba-acc4-1356e4a6d70e@mimimi.pro:443?type=grpc&security=tls&serviceName=api.v2.rpc.ed43dc57c52e69c0&sni=mimimi.pro&alpn=h2&fp=chrome#Mimimi-gRPC
-```
-
----
 
 ---
 
@@ -565,15 +562,7 @@ vless://d2e5507d-e265-44ba-acc4-1356e4a6d70e@mimimi.pro:443?type=grpc&security=t
 | **WebSocket** | ✅ OK | ✅ Работает | После исправления Nginx (map directive) |
 | **XHTTP** | ✅ OK | ❌ Блокируется | DPI распознаёт паттерн splithttp |
 
-### 2.2. Важное отличие от японской ноды
-
-**WebSocket работает внутри регулируемого контура**, но блокируется при трансграничном подключении (Япония → РФ).
-
-Это означает, что DPI применяет разные правила:
-- Трансграничный трафик: блокируется WebSocket и XHTTP
-- Внутренний трафик: блокируется только XHTTP
-
-### 2.3. Анализ блокировки XHTTP
+### 2.2. Анализ блокировки XHTTP
 
 **Симптомы:**
 - Запросы доходят до сервера (HTTP 200 в access.log)
@@ -630,8 +619,8 @@ chunked_transfer_encoding on;
 
 ### 4.1. Для подключений из регулируемых сетей
 
-1. **gRPC** — основной транспорт (работает везде)
-2. **WebSocket** — резервный (работает внутри контура)
+1. **WebSocket** — основной транспорт
+2. **gRPC** — резервный
 3. **XHTTP** — не использовать (блокируется DPI)
 
 ### 4.2. Конфигурация Nginx для WebSocket (обязательно)
@@ -644,20 +633,6 @@ map $http_upgrade $connection_upgrade {
 ```
 
 Без этой директивы WebSocket не будет работать через HTTP/2.
-
----
-
-## 5. Клиентские ссылки
-
-### gRPC (рекомендуется)
-```
-vless://UUID@mimimi.pro:443?type=grpc&security=tls&serviceName=api.v2.rpc.RANDOM_PATH&sni=mimimi.pro&alpn=h2&fp=chrome#Mimimi-gRPC
-```
-
-### WebSocket (резервный)
-```
-vless://UUID@mimimi.pro:443?type=ws&security=tls&path=/api/v2/stream/RANDOM_PATH/&sni=mimimi.pro&fp=chrome#Mimimi-WS
-```
 
 ---
 
