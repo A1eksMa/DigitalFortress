@@ -1,4 +1,4 @@
-# Конфигурация Entry-ноды leto (Россия)
+# Конфигурация Entry-ноды (Россия)
 
 **Версия:** 1.0
 **Дата:** 2026-01-19
@@ -9,8 +9,6 @@
 ## 1. Назначение
 
 Тестовая Entry-нода, развёрнутая **внутри регулируемого контура** (территория РФ) для проверки работоспособности транспортов при подключении из регулируемых сетей.
-
-**Важно:** Это экспериментальная конфигурация. В продакшене Entry-ноды должны располагаться за пределами регулируемого контура.
 
 ---
 
@@ -54,13 +52,18 @@
       "port": 10001,
       "protocol": "vless",
       "settings": {
-        "clients": [{"id": "UUID", "level": 0}],
+        "clients": [
+          {
+            "id": "d2e5507d-e265-44ba-acc4-1356e4a6d70e",
+            "level": 0
+          }
+        ],
         "decryption": "none"
       },
       "streamSettings": {
         "network": "xhttp",
         "xhttpSettings": {
-          "path": "/api/v2/xhttp/RANDOM_PATH/"
+          "path": "/api/v2/xhttp/de8556258953fcc5/"
         }
       }
     },
@@ -70,13 +73,18 @@
       "port": 10002,
       "protocol": "vless",
       "settings": {
-        "clients": [{"id": "UUID", "level": 0}],
+        "clients": [
+          {
+            "id": "d2e5507d-e265-44ba-acc4-1356e4a6d70e",
+            "level": 0
+          }
+        ],
         "decryption": "none"
       },
       "streamSettings": {
         "network": "ws",
         "wsSettings": {
-          "path": "/api/v2/stream/RANDOM_PATH/"
+          "path": "/api/v2/stream/d4d34f819b478b12/"
         }
       }
     },
@@ -86,25 +94,42 @@
       "port": 10003,
       "protocol": "vless",
       "settings": {
-        "clients": [{"id": "UUID", "level": 0}],
+        "clients": [
+          {
+            "id": "d2e5507d-e265-44ba-acc4-1356e4a6d70e",
+            "level": 0
+          }
+        ],
         "decryption": "none"
       },
       "streamSettings": {
         "network": "grpc",
         "grpcSettings": {
-          "serviceName": "api.v2.rpc.RANDOM_PATH"
+          "serviceName": "api.v2.rpc.ed43dc57c52e69c0"
         }
       }
     }
   ],
   "outbounds": [
-    {"tag": "direct", "protocol": "freedom", "settings": {}},
-    {"tag": "block", "protocol": "blackhole", "settings": {}}
+    {
+      "tag": "direct",
+      "protocol": "freedom",
+      "settings": {}
+    },
+    {
+      "tag": "block",
+      "protocol": "blackhole",
+      "settings": {}
+    }
   ],
   "routing": {
     "domainStrategy": "AsIs",
     "rules": [
-      {"type": "field", "ip": ["geoip:private"], "outboundTag": "block"}
+      {
+        "type": "field",
+        "ip": ["geoip:private"],
+        "outboundTag": "block"
+      }
     ]
   }
 }
@@ -132,6 +157,7 @@ server {
     index index.html;
 
     # XHTTP транспорт
+    # Примечание: блокируется DPI в регулируемых сетях
     location /api/v2/xhttp/RANDOM_PATH/ {
         proxy_pass http://127.0.0.1:10001;
         proxy_http_version 1.1;
@@ -146,6 +172,7 @@ server {
     }
 
     # WebSocket транспорт
+    # Работает внутри регулируемого контура
     location /api/v2/stream/RANDOM_PATH/ {
         proxy_pass http://127.0.0.1:10002;
         proxy_http_version 1.1;
@@ -160,6 +187,7 @@ server {
     }
 
     # gRPC транспорт
+    # Рекомендуется как основной — работает везде
     location /api.v2.rpc.RANDOM_PATH {
         grpc_pass grpc://127.0.0.1:10003;
         grpc_set_header Host $host;
@@ -168,10 +196,12 @@ server {
         grpc_send_timeout 300s;
     }
 
+    # Сайт-прикрытие
     location / {
         try_files $uri $uri/ /index.html;
     }
 
+    # Кэширование статики
     location ~* \.(svg|jpg|jpeg|png|gif|ico|css|js)$ {
         expires 30d;
         add_header Cache-Control "public, immutable";
@@ -181,6 +211,7 @@ server {
     error_log /var/log/nginx/mimimi.pro_error.log;
 }
 
+# HTTP → HTTPS редирект
 server {
     listen 80;
     listen [::]:80;
@@ -220,16 +251,6 @@ server {
 curl -sv -X POST "https://mimimi.pro/api/v2/xhttp/PATH/test"
 # Возвращает HTTP 400 + x-padding (нормальный ответ Xray)
 ```
-
-### 4.3. Отличие от японской ноды
-
-| Параметр | Япония (202.223.48.9) | Россия (94.232.46.43) |
-|----------|----------------------|----------------------|
-| gRPC | ✅ Работает | ✅ Работает |
-| WebSocket | ❌ Блокируется DPI | ✅ Работает |
-| XHTTP | ❌ Блокируется DPI | ❌ Блокируется DPI |
-
-**Вывод:** WebSocket работает при подключении внутри регулируемого контура, но блокируется при трансграничном подключении.
 
 ---
 
